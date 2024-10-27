@@ -282,11 +282,6 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, e
         plt.plot(x_values,difference)
         plt.show()
 
-
-'''test'''
-    
-
-
 milestone(False,False,False,False,False,False)
 
 '''
