@@ -6,6 +6,9 @@ import matplotlib.animation as animation
 
 #CONSTANTS (I'm lazy and don't want to google them everytime)
 grav_const=6.67430*(10**-11)
+au = 1.496*10**11
+day_in_seconds=24*60*60
+year_in_seconds=day_in_seconds*365.25
 
 #VECTOR PROCESSING FUNCTIONS
 def scalar_separation(pos1,pos2): #function to get scalar separation of two point/position vectors
@@ -85,13 +88,27 @@ class Particle:
         return self.potential
 
 #MILESTONE PROJECT
-def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, energy_plots, difference_from_circular):
+def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, jupiter_sun_separation, energy_plots, difference_from_circular):
     testing_dt=60*60*24*10 #testing values in line with milestone brief for quick referencing
     testing_iterations=int(36.5*11.8)*100
 
-    earth=Particle(5.972*10**24,np.array([1.496*10**11,0.0,0.0]),np.array([2.56*10**3,29.66*10**3,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt) #setting earth, sun and jupiter particle classes to correct variables
+    earth_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/year_in_seconds) #calculate angle at -1/2dt
+
+    earth_radial_velocity = au*((2*np.pi)/year_in_seconds) #calculate radial velocity of earth
+
+    v_x_earth=earth_radial_velocity*np.cos(((np.pi)/2)-earth_halfstepback_angle) #calculate x and y components of 'initial velocities'
+    v_y_earth=earth_radial_velocity*np.sin(((np.pi)/2)-earth_halfstepback_angle)
+
+    jupiter_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/(11.86*year_in_seconds)) #repeat process for jupiter
+
+    jupiter_radial_velocity = (756.15*10**9)*((2*np.pi)/(11.86*year_in_seconds))
+
+    v_x_jupiter=jupiter_radial_velocity*np.cos(((np.pi)/2)-jupiter_halfstepback_angle)
+    v_y_jupiter=jupiter_radial_velocity*np.sin(((np.pi)/2)-jupiter_halfstepback_angle)
+
+    earth=Particle(5.972*10**24,np.array([au,0.0,0.0]),np.array([v_x_earth,v_y_earth,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt) #setting earth, sun and jupiter particle classes to correct variables
     sun=Particle(1.989*10**30,np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
-    jupiter=Particle(1.898*10**27,np.array([756.15*10**9,0.0,0.0]),np.array([94.7,13.07*10**3,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
+    jupiter=Particle(1.898*10**27,np.array([756.15*10**9,0.0,0.0]),np.array([v_x_jupiter,v_y_jupiter,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
 
     sun.velocity=-1*(earth.mass*earth.velocity+jupiter.mass*jupiter.velocity)/sun.mass #calculates velocity of sun necessart to meet physical condition of p=0 for the system
 
@@ -144,7 +161,8 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, e
         time+=10 #advance by timestep (note: time is purely a cosmetic variable, testing_dt is used in iterative simulations)
 
     if plot_orbits==True: #check if plot requested, if true, produce position plot
-        plt.figure(figsize=(15,15))
+        fig, ax=plt.subplots()
+        ax.set_aspect('equal')
         plt.title('')
         plt.plot(earths[:,0],earths[:,1])
         plt.plot(suns[:,0],suns[:,1],c='y')
@@ -222,6 +240,17 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, e
         plt.plot(x_values,separation_au)
         fig.set_figwidth(20)
         plt.show()
+
+    if jupiter_sun_separation==True:
+        separation=np.zeros(len(jupiters)) #creates storage list for separation values
+        for i in range(len(jupiters)):
+            separation[i]=scalar_separation(jupiters[i],suns[i]) #calculate separation using previous function
+        x_values=np.linspace(0,len(jupiters)*10,len(jupiters)) #generate x-axis in terms of days
+        separation_au=separation/(4.31*1.496*10**11) #turn distance into AU
+        fig = plt.figure()
+        plt.plot(x_values,separation_au)
+        fig.set_figwidth(20)
+        plt.show()    
     
     if energy_plots==True:
         ke=np.zeros(len(earths)) #generates storage array for kinetic energy
@@ -246,6 +275,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, e
 
         count=0
         
+
         for potential in earth_potentials:
             pe[count]+=potential #store object potential from potenital array
             count+=1
@@ -282,7 +312,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, e
         plt.plot(x_values,difference)
         plt.show()
 
-milestone(False,False,False,False,False,False)
+milestone(False,False,False,False,False,True,False)
 
 '''
 MILESTONE TO-DO:
