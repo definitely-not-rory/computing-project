@@ -39,9 +39,10 @@ def gravity(mass1,mass2,pos1,pos2,softening): #basic particle-particle gravity
     vector_force=scalar_force*separation #calculate vector force by generating unit vector of separation
     return vector_force
 
-def potential(mass1,mass2,pos1,pos2,softening):
-    potential=-1*(grav_const*mass1*mass2)/(scalar_separation(pos1,pos2)**2+softening**2)**(1/2)
-    return potential
+def potential_energy(mass1,mass2,pos1,pos2,softening):
+    separation=scalar_separation(pos1,pos2)
+    gpe=-1*(mass1*mass2*grav_const)/(np.sqrt(separation**2+softening**2))
+    return gpe
 
 #PARTICLE CLASS
 class Particle:
@@ -56,19 +57,22 @@ class Particle:
     def calculate_forces(self, particles, softening): #calculate all gravitational forces on a particle
         resultant_force=np.array([0.0,0.0,0.0])
         for particle in particles:
-            resultant_force += gravity(self.mass,particle.mass,self.pos,particle.pos,softening)
+            if particle != self:
+                resultant_force += gravity(self.mass,particle.mass,self.pos,particle.pos,softening)
         self.force=resultant_force
         return resultant_force
 
-    def calculate_potential(self,particles,softening): #calculate current gravitational potential on a particle
+    def calculate_potential_energy(self,particles,softening): #calculate current gravitational potential on a particle
         total_potential=0.0
         for particle in particles:
-            total_potential+= potential(self.mass, particle.mass,self.pos,particle.pos,softening)
+            if particle != self:
+                total_potential+= potential_energy(self.mass, particle.mass,self.pos,particle.pos,softening)
+        self.potential=total_potential
         return total_potential
         
     def iterate(self, particles, softening): #add function to complete one full iteration step (originally had v and pos iterate in different steps (too hard, got rid))
         force = self.calculate_forces(particles, softening)
-        self.potential=self.calculate_potential(particles,softening)
+        self.potential=self.calculate_potential_energy(particles,softening)
         self.velocity+=(force/self.mass)*self.dt #iterate velocity first/do n-1/2 step
         self.pos += self.velocity*self.dt #iterate position second/do n step
         #print(self.pos)
@@ -89,7 +93,7 @@ class Particle:
 #MILESTONE PROJECT
 def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, jupiter_sun_separation, energy_plots, difference_from_circular):
     testing_dt=60*60*24*10 #testing values in line with milestone brief for quick referencing
-    testing_iterations=int(36.5*11.8)*100
+    testing_iterations=int(36.5*11.8*100)
 
     earth_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/year_in_seconds) #calculate angle at -1/2dt
 
@@ -109,7 +113,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
     sun=Particle(1.989*10**30,np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
     jupiter=Particle(1.898*10**27,np.array([756.15*10**9,0.0,0.0]),np.array([v_x_jupiter,v_y_jupiter,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
 
-    sun.velocity=-1*(earth.mass*earth.velocity+jupiter.mass*jupiter.velocity)/sun.mass #calculates velocity of sun necessart to meet physical condition of p=0 for the system
+    sun.velocity=-1*(earth.mass*earth.velocity+jupiter.mass*jupiter.velocity)/sun.mass #calculates velocity of sun necessary to meet physical condition of p=0 for the system
 
     particles=[earth,sun,jupiter] #defining list of active particles
 
@@ -252,52 +256,50 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.show()    
     
     if energy_plots==True:
-        ke=np.zeros(len(earths)) #generates storage array for kinetic energy
-        pe=np.zeros(len(earths)) #generates storage array for potential energy
-        total_energy=np.zeros(len(earths)) #generates total array for potential energy
-
+        ke_earth=np.zeros(len(earths)) #generates storage array for kinetic energy
+        ke_sun=np.zeros(len(earths)) #generates storage array for kinetic energy
+        ke_jupiter=np.zeros(len(earths)) #generates storage array for kinetic energy
+        
         count=0 #counting variable
-
         for velocity in earth_vels:
-            ke[count]+=1/2*earth.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2) #generate kinetic energy from velocity array
+            ke_earth[count]+=1/2*earth.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2) #generate kinetic energy from velocity array
             count+=1
         
         count=0
         for velocity in sun_vels:
-            ke[count]+=1/2*sun.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
+            ke_sun[count]+=1/2*sun.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
             count+=1
 
         count=0
         for velocity in jupiter_vels:
-            ke[count]+=1/2*jupiter.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
-            count+=1
-
-        count=0
-        
-
-        for potential in earth_potentials:
-            pe[count]+=potential #store object potential from potenital array
-            count+=1
-
-        count=0
-        for potential in sun_potentials:
-            pe[count]+=potential
-            count+=1
-
-        count=0
-        for potential in jupiter_potentials:
-            pe[count]+=potential
+            ke_jupiter[count]+=1/2*jupiter.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
             count+=1
 
         x_values=np.linspace(0,len(earths)*10,len(earths)) #generate x-axis in terms of days
-        fig, axs = plt.subplots(2)
-        axs[0].plot(x_values,ke)
+        fig, axs = plt.subplots(6)
+        axs[0].plot(x_values,ke_earth)
         axs[0].set_xlabel('Time (days)')
         axs[0].set_ylabel('Kinetic Energy (J)')
-        axs[1].plot(x_values,pe)
-        axs[0].set_xlabel('Time (days)')
-        axs[0].set_ylabel('Potential Energy (J)')
-        fig.tight_layout(pad=0.5)
+        axs[1].plot(x_values,earth_potentials)
+        axs[1].set_xlabel('Time (days)')
+        axs[1].set_ylabel('Potential Energy (J)')
+
+        axs[2].plot(x_values,ke_sun)
+        axs[2].set_xlabel('Time (days)')
+        axs[2].set_ylabel('Kinetic Energy (J)')
+        axs[3].plot(x_values,sun_potentials)
+        axs[3].set_xlabel('Time (days)')
+        axs[3].set_ylabel('Potential Energy (J)')
+
+        axs[4].plot(x_values,ke_jupiter)
+        axs[4].set_xlabel('Time (days)')
+        axs[4].set_ylabel('Kinetic Energy (J)')
+        axs[5].plot(x_values,jupiter_potentials)
+        axs[5].set_xlabel('Time (days)')
+        axs[5].set_ylabel('Potential Energy (J)')
+
+        fig.set_figheight(30)
+        fig.tight_layout(pad=2)
         plt.show()
     
     if difference_from_circular==True:
@@ -318,7 +320,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.ylabel('Variation from Circular Earth Orbit (AU)')
         plt.show()
 
-milestone(False,False,False,False,False,False,True)
+milestone(False,False,False,False,False,True,False) 
 
 '''
 MILESTONE TO-DO:
