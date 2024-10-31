@@ -40,8 +40,7 @@ def gravity(mass1,mass2,pos1,pos2,softening): #basic particle-particle gravity
     return vector_force
 
 def potential(mass1,mass2,pos1,pos2,softening):
-    separation=pos2-pos1
-    potential=-1*((grav_const*mass1*mass2)*scalar_separation(pos1,pos2))/(scalar_separation(pos1,pos2)**2+softening**2)**(1/2)
+    potential=-1*(grav_const*mass1*mass2)/(scalar_separation(pos1,pos2)**2+softening**2)**(1/2)
     return potential
 
 #PARTICLE CLASS
@@ -293,9 +292,11 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         x_values=np.linspace(0,len(earths)*10,len(earths)) #generate x-axis in terms of days
         fig, axs = plt.subplots(2)
         axs[0].plot(x_values,ke)
-        axs[0].set_title('Kinetic Energy')
+        axs[0].set_xlabel('Time (days)')
+        axs[0].set_ylabel('Kinetic Energy (J)')
         axs[1].plot(x_values,pe)
-        axs[1].set_title('Potential Energy')
+        axs[0].set_xlabel('Time (days)')
+        axs[0].set_ylabel('Potential Energy (J)')
         fig.tight_layout(pad=0.5)
         plt.show()
     
@@ -307,12 +308,17 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         separation_au=separation/(1.496*10**11) #turn distance into AU
         radii_au=np.ones(len(earths)) #generate circular radius values for 1AU
         difference=separation_au-radii_au #calculate difference from circular orbit
+        total_variation = abs(max(difference)-min(difference))
+        percentage_variation = total_variation *100
+        print(str(percentage_variation)+'%')
         fig=plt.figure()
         fig.set_figwidth(30)
         plt.plot(x_values,difference)
+        plt.xlabel('Time (days)')
+        plt.ylabel('Variation from Circular Earth Orbit (AU)')
         plt.show()
 
-milestone(False,False,False,False,False,True,False)
+milestone(False,False,False,False,False,False,True)
 
 '''
 MILESTONE TO-DO:
