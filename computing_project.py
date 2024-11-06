@@ -9,6 +9,7 @@ grav_const=6.67430*(10**-11)
 au = 1.496*10**11
 day_in_seconds=24*60*60
 year_in_seconds=day_in_seconds*365.242374
+sun_jupiter_distance=5.2*au
 
 #VECTOR PROCESSING FUNCTIONS
 def scalar_separation(pos1,pos2): #function to get scalar separation of two point/position vectors
@@ -31,6 +32,12 @@ def unit_vector(vector): #function to generate unit vector of a given input vect
         sum+=i**2
     sum=np.sqrt(sum)
     return vector/sum
+
+def magnitude(vector):
+    sum=0
+    for i in vector:
+        sum+=i**2
+    return np.sqrt(sum)
 
 #PARTICLE INTERACTIONS
 def gravity(mass1,mass2,pos1,pos2,softening): #basic particle-particle gravity
@@ -89,7 +96,6 @@ class Particle:
         self.potential=self.calculate_potential_energy(particles,softening)
         self.velocity+=(force/self.mass)*self.dt #iterate velocity first/do n-1/2 step
         self.pos += self.velocity*self.dt #iterate position second/do n step
-        #print(self.pos)
     
     #get functions for position, velocity and forces to make plotting easier
     def get_pos(self):
@@ -119,14 +125,14 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
 
     jupiter_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/(11.86*year_in_seconds)) #repeat process for jupiter
 
-    jupiter_radial_velocity = (756.15*10**9)*((2*np.pi)/(11.86*year_in_seconds))
+    jupiter_radial_velocity = (sun_jupiter_distance)*((2*np.pi)/(11.86*year_in_seconds))
 
     v_x_jupiter=jupiter_radial_velocity*np.cos(((np.pi)/2)-jupiter_halfstepback_angle)
     v_y_jupiter=jupiter_radial_velocity*np.sin(((np.pi)/2)-jupiter_halfstepback_angle)
 
     earth=Particle(5.972*10**24,np.array([au,0.0,0.0]),np.array([v_x_earth,v_y_earth,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt) #setting earth, sun and jupiter particle classes to correct variables
     sun=Particle(1.989*10**30,np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
-    jupiter=Particle(1.898*10**27,np.array([756.15*10**9,0.0,0.0]),np.array([v_x_jupiter,v_y_jupiter,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
+    jupiter=Particle(1.898*10**27,np.array([sun_jupiter_distance,0.0,0.0]),np.array([v_x_jupiter,v_y_jupiter,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
 
     particles=[earth,sun,jupiter] #defining list of active particles
 
@@ -136,6 +142,10 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
             momentum+=particle.mass*particle.velocity
 
     sun.velocity=-1*momentum/sun.mass
+
+    print(earth.velocity)
+    print(jupiter.velocity)
+    print(sun.velocity)
 
     initial_com=centre_of_mass(particles)
 
@@ -374,7 +384,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.show()
         
 
-milestone(False,False,False,False,False,True,False,False) 
+milestone(False,True,False,False,False,False,True,False) 
 
 '''
 MILESTONE TO-DO:
