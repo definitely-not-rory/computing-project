@@ -114,7 +114,8 @@ class Particle:
 def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, jupiter_sun_separation, energy_plots, difference_from_circular,com_plot):
     
     testing_dt=10*day_in_seconds #testing values in line with milestone brief for quick referencing
-    testing_iterations=int(36.5*11.8*100)
+    total_sim_time=365*day_in_seconds*11.8*100
+    testing_iterations=int(total_sim_time/testing_dt)
 
     earth_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/year_in_seconds) #calculate angle at -1/2dt
 
@@ -143,15 +144,16 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
 
     sun.velocity=-1*momentum/sun.mass
 
-    print(earth.velocity)
-    print(jupiter.velocity)
-    print(sun.velocity)
-
     initial_com=centre_of_mass(particles)
 
     for particle in particles:
         particle.pos-=initial_com
 
+    new_com=centre_of_mass(particles)
+
+    for particle in particles:
+        particle.pos-=new_com
+    
     earths=np.zeros((testing_iterations+1,3)) #setting storage arrays to correct size to store positions of each particle
     suns=np.zeros((testing_iterations+1,3))
     jupiters=np.zeros((testing_iterations+1,3))
@@ -207,12 +209,12 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.plot(earths[:,0],earths[:,1])
         plt.plot(suns[:,0],suns[:,1],c='y')
         plt.plot(jupiters[:,0],jupiters[:,1])
-        x_values=[]
+        '''x_values=[]
         y_values=[]
         for com in coms:
             x_values.append(com[0])
             y_values.append(com[1])
-        plt.plot(x_values,y_values,c='r')
+        plt.plot(x_values,y_values,c='r')'''
         plt.show()
         
     if show_animation==True:
@@ -322,6 +324,10 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
 
         x_values=np.linspace(0,len(earths)*10,len(earths)) #generate x-axis in terms of days
 
+        ke=ke_earth+ke_jupiter+ke_sun
+
+        pe=earth_potentials+jupiter_potentials+sun_potentials
+
         total_energy=ke_earth+ke_jupiter+ke_sun+earth_potentials+jupiter_potentials+sun_potentials
 
         change_in_energy=(total_energy[0]-total_energy[-1])/total_energy[0]
@@ -330,7 +336,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
 
         fig, axs = plt.subplots(7)
 
-        axs[0].plot(x_values,ke_earth)
+        '''axs[0].plot(x_values,ke_earth)
         axs[0].set_xlabel('Time (days)')
         axs[0].set_ylabel('Kinetic Energy (J)')
         axs[1].plot(x_values,earth_potentials)
@@ -351,10 +357,22 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         axs[5].set_xlabel('Time (days)')
         axs[5].set_ylabel('Potential Energy (J)')
 
-        axs[6].plot(x_values,total_energy)
+        axs[6].plot(x_values,total_energy)'''
+
+        fig,axs=plt.subplots(3)
+        axs[0].plot(x_values,ke)
+        axs[0].set_xlabel('Time (days)')
+        axs[0].set_ylabel('Kinetic Energy (J)')
+        axs[1].plot(x_values,pe)
+        axs[1].set_xlabel('Time (days)')
+        axs[1].set_ylabel('Potential Energy (J)')
+        axs[2].plot(x_values,total_energy)
+        axs[2].set_xlabel('Time (days)')
+        axs[2].set_ylabel('Total Energy (J)')
+        '''
 
         fig.set_figheight(30)
-        fig.tight_layout(pad=2)
+        fig.tight_layout(pad=2)'''
         plt.show()
     
     if difference_from_circular==True:
@@ -384,7 +402,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.show()
         
 
-milestone(False,True,False,False,False,False,True,False) 
+milestone(False,False,False,False,False,True,True,False) 
 
 '''
 MILESTONE TO-DO:
