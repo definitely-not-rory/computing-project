@@ -3,6 +3,22 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 
+import numpy as np
+import scipy as sp
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+plt.rcParams.update({'font.size': 14})
+
+import matplotlib.font_manager as font_manager
+plt.rcParams["axes.formatter.use_mathtext"]=True
+plt.rcParams['font.family']='serif'
+cmfont = font_manager.FontProperties(fname=mpl.get_data_path() + '/fonts/ttf/cmr10.ttf')
+plt.rcParams['font.serif']=cmfont.get_name()
+plt.rcParams['mathtext.fontset']='cm'
+plt.rcParams['axes.unicode_minus']=False
+
 pos_x_values=np.linspace(0,100,11)
 
 vel_x_values=pos_x_values-5

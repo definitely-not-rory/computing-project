@@ -1,13 +1,24 @@
 #IMPORTS
 import numpy as np
 import scipy as sp
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+plt.rcParams.update({'font.size': 14})
+
+import matplotlib.font_manager as font_manager
+plt.rcParams["axes.formatter.use_mathtext"]=True
+plt.rcParams['font.family']='serif'
+cmfont = font_manager.FontProperties(fname=mpl.get_data_path() + '/fonts/ttf/cmr10.ttf')
+plt.rcParams['font.serif']=cmfont.get_name()
+plt.rcParams['mathtext.fontset']='cm'
+plt.rcParams['axes.unicode_minus']=False
+
 #CONSTANTS (I'm lazy and don't want to google them everytime)
-grav_const=6.67430*(10**-11)
-au = 1.496*10**11
-day_in_seconds=24*60*60
+grav_const=np.float64(6.67430*(10**-11))
+au = np.float64(1.496*10**11)
+day_in_seconds=np.float64(24*60*60)
 year_in_seconds=day_in_seconds*365.242374
 sun_jupiter_distance=5.2*au
 
@@ -21,7 +32,7 @@ def scalar_separation(pos1,pos2): #function to get scalar separation of two poin
         current_dimension=0 #variable indicating which dimension is being processesd
         while current_dimension<len(pos1): #iterating through dimensions
             dimension_diff=pos2[current_dimension]-pos1[current_dimension]
-            total_separation+=dimension_diff**2 #summing squared separated distances
+            total_separation=total_separation+dimension_diff**2 #summing squared separated distances
             current_dimension+=1 #increment to next dimension
         total_separation=np.sqrt(total_separation) #square rooting and returning true separation
         return total_separation
@@ -53,17 +64,20 @@ def potential_energy(mass1,mass2,pos1,pos2,softening):
     return gpe
 
 def centre_of_mass(particles):
-    masses=[]
-    positions=[]
+    com_contributions = np.float64(0.0)
+    total_mass = np.float64(0.0)
     for particle in particles:
-        masses.append(particle.mass)
-        positions.append(particle.pos)
-    total_mass=np.sum(masses)
-    com_contributions=0
-    for i in range(len(particles)):
-        com_contributions+=masses[i]*positions[i]
-    com=com_contributions/total_mass
-    return com
+        com_contributions = com_contributions +particle.mass * particle.pos
+        total_mass = total_mass +particle.mass
+
+    return com_contributions / total_mass
+
+def momentum(particles):
+    momentum=np.array([0.0,0.0,0.0])
+    for particle in particles:
+        momentum+=particle.mass*particle.velocity
+    return momentum
+
 
 #PARTICLE CLASS
 class Particle:
@@ -79,7 +93,7 @@ class Particle:
         resultant_force=np.array([0.0,0.0,0.0])
         for particle in particles:
             if particle != self:
-                resultant_force += gravity(self.mass,particle.mass,self.pos,particle.pos,softening)
+                resultant_force =resultant_force + gravity(self.mass,particle.mass,self.pos,particle.pos,softening)
         self.force=resultant_force
         return resultant_force
 
@@ -87,15 +101,15 @@ class Particle:
         total_potential=0.0
         for particle in particles:
             if particle != self:
-                total_potential+= potential_energy(self.mass, particle.mass,self.pos,particle.pos,softening)
+                total_potential= total_potential+potential_energy(self.mass, particle.mass,self.pos,particle.pos,softening)
         self.potential=total_potential
         return total_potential
         
     def iterate(self, particles, softening): #add function to complete one full iteration step (originally had v and pos iterate in different steps (too hard, got rid))
         force = self.calculate_forces(particles, softening)
         self.potential=self.calculate_potential_energy(particles,softening)
-        self.velocity+=(force/self.mass)*self.dt #iterate velocity first/do n-1/2 step
-        self.pos += self.velocity*self.dt #iterate position second/do n step
+        self.velocity=self.velocity+(force/self.mass)*self.dt #iterate velocity first/do n-1/2 step
+        self.pos = self.pos +self.velocity*self.dt #iterate position second/do n step
     
     #get functions for position, velocity and forces to make plotting easier
     def get_pos(self):
@@ -114,45 +128,77 @@ class Particle:
 def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, jupiter_sun_separation, energy_plots, difference_from_circular,com_plot):
     
     testing_dt=10*day_in_seconds #testing values in line with milestone brief for quick referencing
-    total_sim_time=365*day_in_seconds*11.8*100
+    testing_dt_in_days=testing_dt/day_in_seconds
+    total_sim_time=365.242374*day_in_seconds*11.96*100
     testing_iterations=int(total_sim_time/testing_dt)
 
-    earth_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/year_in_seconds) #calculate angle at -1/2dt
+    #Calculations for velocity vectors at -1/2dt
+    e_angle=(2*np.pi/365.242374)*(testing_dt_in_days)/2
 
-    earth_radial_velocity = au*((2*np.pi)/year_in_seconds) #calculate radial velocity of earth
+    e_omega=2*np.pi/(365.242374*day_in_seconds)
 
-    v_x_earth=earth_radial_velocity*np.cos(((np.pi)/2)-earth_halfstepback_angle) #calculate x and y components of 'initial velocities'
-    v_y_earth=earth_radial_velocity*np.sin(((np.pi)/2)-earth_halfstepback_angle)
+    e_vel=au*e_omega
 
-    jupiter_halfstepback_angle=(testing_dt*0.5)*((2*np.pi)/(11.86*year_in_seconds)) #repeat process for jupiter
+    e_vel_x=e_vel*np.cos(np.pi/2-e_angle)
+    e_vel_y=e_vel*np.sin(np.pi/2-e_angle)
 
-    jupiter_radial_velocity = (sun_jupiter_distance)*((2*np.pi)/(11.86*year_in_seconds))
+    j_angle=(2*np.pi/(11.86*365.242374))*(testing_dt_in_days)/2
 
-    v_x_jupiter=jupiter_radial_velocity*np.cos(((np.pi)/2)-jupiter_halfstepback_angle)
-    v_y_jupiter=jupiter_radial_velocity*np.sin(((np.pi)/2)-jupiter_halfstepback_angle)
+    j_omega=2*np.pi/(11.86*365.242374*day_in_seconds)
 
-    earth=Particle(5.972*10**24,np.array([au,0.0,0.0]),np.array([v_x_earth,v_y_earth,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt) #setting earth, sun and jupiter particle classes to correct variables
-    sun=Particle(1.989*10**30,np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
-    jupiter=Particle(1.898*10**27,np.array([sun_jupiter_distance,0.0,0.0]),np.array([v_x_jupiter,v_y_jupiter,0.0]),np.array([0.0,0.0,0.0]),0,testing_dt)
+    j_vel=5.2*au*j_omega
 
-    particles=[earth,sun,jupiter] #defining list of active particles
+    j_vel_x=j_vel*np.cos(np.pi/2-j_angle)
+    j_vel_y=j_vel*np.sin(np.pi/2-j_angle)
 
-    momentum=np.array([0.0,0.0,0.0])
+
+    earth_pos=np.array([au,0.0,0.0])
+    sun_pos=np.array([0.0,0.0,0.0])
+    jupiter_pos=np.array([5.2*au,0.0,0.0])
+
+    earth_vel=np.array([e_vel_x,e_vel_y,0.0])
+    sun_vel=np.array([0.0,0.0,0.0])
+    jupiter_vel=np.array([j_vel_x,j_vel_y,0.0])
+
+    earth=Particle(np.float64(5.972*10**24),earth_pos,earth_vel,np.array([0.0,0.0,0.0]),0,testing_dt) #setting earth, sun and jupiter particle classes to correct variables
+    sun=Particle(np.float64(1.989*10**30),sun_pos,sun_vel,np.array([0.0,0.0,0.0]),0,testing_dt)
+    jupiter=Particle(np.float64(1.898*10**27),jupiter_pos,jupiter_vel,np.array([0.0,0.0,0.0]),0,testing_dt)
+
+    particles=[sun,jupiter,earth] #defining list of active particles
+    initial_momentum=np.array([0.0,0.0,0.0])
     for particle in particles:
         if particle!=sun:
-            momentum+=particle.mass*particle.velocity
-
-    sun.velocity=-1*momentum/sun.mass
+            initial_momentum=initial_momentum+particle.mass*particle.velocity
+    
+    sun.velocity=-1*initial_momentum/sun.mass
 
     initial_com=centre_of_mass(particles)
 
     for particle in particles:
-        particle.pos-=initial_com
+        particle.pos=particle.pos-initial_com
 
-    new_com=centre_of_mass(particles)
+    '''new_com=centre_of_mass(particles)
+    
+    
+    print(new_com)
+
+    print(sun.pos)
+    print(earth.pos)
+    print(jupiter.pos)
 
     for particle in particles:
-        particle.pos-=new_com
+        particle.pos=particle.pos-new_com'''
+
+    com_vel=0
+    total_mass=0
+    for particle in particles:
+        com_vel+=particle.mass*particle.velocity
+        total_mass+=particle.mass
+    
+    com_vel=com_vel/total_mass
+
+    for particle in particles:
+        particle.velocity-=com_vel
     
     earths=np.zeros((testing_iterations+1,3)) #setting storage arrays to correct size to store positions of each particle
     suns=np.zeros((testing_iterations+1,3))
@@ -167,40 +213,43 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
     jupiter_potentials=np.zeros((testing_iterations+1))
 
     coms=[]
+    momenta=[]
 
     time=0 #setting t=0 to start simulation
-
+    print(momentum(particles))
     for i in range(testing_iterations+1): #iteration loop
         counter=0 #counting variable to track where in list 'particles iteration cycle is, resets to 0 at the end of one iteration of each particle
         coms.append(centre_of_mass(particles))
+        momenta.append(momentum(particles))
         for particle in particles:
             particle.iterate(particles,0) #do iteration with selected softening
             current_pos=particle.get_pos() #stores current position as local variable
             current_velocity=particle.get_velocity() #stores current velocity as local variable
             current_potential=particle.get_potential()
-            if counter==0: #checking which particle is currently selected using counting variable
+            print(momentum(particles))
+            if counter==1: #checking which particle is currently selected using counting variable
                 name='Earth' #setting name if displaying all values of position is needed
-                earths[int(time/10)]=current_pos #storing current position in array
-                earth_vels[int(time/10)]=current_velocity #storing current velocity in array
-                earth_potentials[int(time/10)]=current_potential
+                earths[int(time/testing_dt_in_days)]=current_pos #storing current position in array
+                earth_vels[int(time/testing_dt_in_days)]=current_velocity #storing current velocity in array
+                earth_potentials[int(time/testing_dt_in_days)]=current_potential
                 
-            elif counter==1:
+            elif counter==0:
                 name='Sun'
-                suns[int(time/10)]=current_pos 
-                sun_vels[int(time/10)]=current_velocity
-                sun_potentials[int(time/10)]=current_potential
+                suns[int(time/testing_dt_in_days)]=current_pos 
+                sun_vels[int(time/testing_dt_in_days)]=current_velocity
+                sun_potentials[int(time/testing_dt_in_days)]=current_potential
             else:
                 name='Jupiter'
-                jupiters[int(time/10)]=current_pos
-                jupiter_vels[int(time/10)]=current_velocity 
-                jupiter_potentials[int(time/10)]=current_potential
+                jupiters[int(time/testing_dt_in_days)]=current_pos
+                jupiter_vels[int(time/testing_dt_in_days)]=current_velocity 
+                jupiter_potentials[int(time/testing_dt_in_days)]=current_potential
 
             if display_vals==True: #if requested to display all position values in function input, print each dt cycles position for each particle
                 print('~~~ Day '+str(time)+' ~~~')
                 print(name+': '+str(current_pos))
             counter+=1 #increment particle counter by 1 to move to next in list
             
-        time+=10 #advance by timestep (note: time is purely a cosmetic variable, testing_dt is used in iterative simulations)
+        time+=testing_dt_in_days #advance by timestep (note: time is purely a cosmetic variable, testing_dt is used in iterative simulations)
 
     if plot_orbits==True: #check if plot requested, if true, produce position plot
         fig, ax=plt.subplots()
@@ -209,12 +258,12 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.plot(earths[:,0],earths[:,1])
         plt.plot(suns[:,0],suns[:,1],c='y')
         plt.plot(jupiters[:,0],jupiters[:,1])
-        '''x_values=[]
+        x_values=[]
         y_values=[]
         for com in coms:
             x_values.append(com[0])
             y_values.append(com[1])
-        plt.plot(x_values,y_values,c='r')'''
+        plt.plot(x_values,y_values,c='r')
         plt.show()
         
     if show_animation==True:
@@ -309,17 +358,17 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         
         count=0 #counting variable
         for velocity in earth_vels:
-            ke_earth[count]+=1/2*earth.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2) #generate kinetic energy from velocity array
+            ke_earth[count]=ke_earth[count]+1/2*earth.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2) #generate kinetic energy from velocity array
             count+=1
         
         count=0
         for velocity in sun_vels:
-            ke_sun[count]+=1/2*sun.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
+            ke_sun[count]=ke_sun[count]+1/2*sun.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
             count+=1
 
         count=0
         for velocity in jupiter_vels:
-            ke_jupiter[count]+=1/2*jupiter.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
+            ke_jupiter[count]=ke_jupiter[count]+1/2*jupiter.mass*(velocity[0]**2+velocity[1]**2+velocity[2]**2)
             count+=1
 
         x_values=np.linspace(0,len(earths)*10,len(earths)) #generate x-axis in terms of days
@@ -332,11 +381,11 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
 
         change_in_energy=(total_energy[0]-total_energy[-1])/total_energy[0]
 
-        print(str(change_in_energy*100)+'%')
+        print('Change in Energy: '+str(change_in_energy*100)+'%')
 
         fig, axs = plt.subplots(7)
 
-        '''axs[0].plot(x_values,ke_earth)
+        axs[0].plot(x_values,ke_earth)
         axs[0].set_xlabel('Time (days)')
         axs[0].set_ylabel('Kinetic Energy (J)')
         axs[1].plot(x_values,earth_potentials)
@@ -357,7 +406,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         axs[5].set_xlabel('Time (days)')
         axs[5].set_ylabel('Potential Energy (J)')
 
-        axs[6].plot(x_values,total_energy)'''
+        axs[6].plot(x_values,total_energy)
 
         fig,axs=plt.subplots(3)
         axs[0].plot(x_values,ke)
@@ -385,7 +434,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         difference=separation_au-radii_au #calculate difference from circular orbit
         total_variation = abs(max(difference)-min(difference))
         percentage_variation = total_variation *100
-        print(str(percentage_variation)+'%')
+        print('Circ Change: '+str(percentage_variation)+'%')
         fig=plt.figure()
         plt.plot(x_values,difference)
         plt.xlabel('Time (days)')
@@ -402,18 +451,17 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.show()
         
 
-milestone(False,False,False,False,False,True,True,False) 
+milestone(False,True,False,False,False,False,False,False) 
 
 '''
-MILESTONE TO-DO:
 
-Take data over different timesteps
+Extensions:
+Solar System
+Galaxies
+Planetary Rings
+Globular Cluster
+Open Cluster
 
-Questions:
-
-Slowly drifting inwards?
-
-How many references/what should we reference
 
 
 '''
