@@ -105,8 +105,7 @@ class Particle:
         self.potential=total_potential
         return total_potential
         
-    def iterate(self, particles, softening): #add function to complete one full iteration step (originally had v and pos iterate in different steps (too hard, got rid))
-        force = self.calculate_forces(particles, softening)
+    def iterate(self, particles,force, softening): #add function to complete one full iteration step (originally had v and pos iterate in different steps (too hard, got rid))
         self.potential=self.calculate_potential_energy(particles,softening)
         self.velocity=self.velocity+(force/self.mass)*self.dt #iterate velocity first/do n-1/2 step
         self.pos = self.pos +self.velocity*self.dt #iterate position second/do n step
@@ -129,7 +128,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
     
     testing_dt=10*day_in_seconds #testing values in line with milestone brief for quick referencing
     testing_dt_in_days=testing_dt/day_in_seconds
-    total_sim_time=365.242374*day_in_seconds*11.96*100
+    total_sim_time=365.242374*day_in_seconds*100
     testing_iterations=int(total_sim_time/testing_dt)
 
     #Calculations for velocity vectors at -1/2dt
@@ -216,30 +215,38 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
     momenta=[]
 
     time=0 #setting t=0 to start simulation
-    print(momentum(particles))
     for i in range(testing_iterations+1): #iteration loop
         counter=0 #counting variable to track where in list 'particles iteration cycle is, resets to 0 at the end of one iteration of each particle
         coms.append(centre_of_mass(particles))
         momenta.append(momentum(particles))
+        sun_forces=sun.calculate_forces(particles,0)
+        jupiter_forces=jupiter.calculate_forces(particles,0)
+        earth_forces=earth.calculate_forces(particles,0)
         for particle in particles:
-            particle.iterate(particles,0) #do iteration with selected softening
-            current_pos=particle.get_pos() #stores current position as local variable
-            current_velocity=particle.get_velocity() #stores current velocity as local variable
-            current_potential=particle.get_potential()
-            print(momentum(particles))
-            if counter==1: #checking which particle is currently selected using counting variable
+            if counter==2: #checking which particle is currently selected using counting variable
+                particle.iterate(particles,earth_forces,0) #do iteration with selected softening
+                current_pos=particle.get_pos() #stores current position as local variable
+                current_velocity=particle.get_velocity() #stores current velocity as local variable
+                current_potential=particle.get_potential()
                 name='Earth' #setting name if displaying all values of position is needed
                 earths[int(time/testing_dt_in_days)]=current_pos #storing current position in array
                 earth_vels[int(time/testing_dt_in_days)]=current_velocity #storing current velocity in array
-                earth_potentials[int(time/testing_dt_in_days)]=current_potential
-                
+                earth_potentials[int(time/testing_dt_in_days)]=current_potential   
             elif counter==0:
+                particle.iterate(particles,sun_forces,0) #do iteration with selected softening
+                current_pos=particle.get_pos() #stores current position as local variable
+                current_velocity=particle.get_velocity() #stores current velocity as local variable
+                current_potential=particle.get_potential()
                 name='Sun'
                 suns[int(time/testing_dt_in_days)]=current_pos 
                 sun_vels[int(time/testing_dt_in_days)]=current_velocity
                 sun_potentials[int(time/testing_dt_in_days)]=current_potential
             else:
                 name='Jupiter'
+                particle.iterate(particles,jupiter_forces,0) #do iteration with selected softening
+                current_pos=particle.get_pos() #stores current position as local variable
+                current_velocity=particle.get_velocity() #stores current velocity as local variable
+                current_potential=particle.get_potential()
                 jupiters[int(time/testing_dt_in_days)]=current_pos
                 jupiter_vels[int(time/testing_dt_in_days)]=current_velocity 
                 jupiter_potentials[int(time/testing_dt_in_days)]=current_potential
@@ -392,21 +399,21 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         axs[1].set_xlabel('Time (days)')
         axs[1].set_ylabel('Potential Energy (J)')
 
-        axs[2].plot(x_values,ke_sun)
+        axs[2].plot(x_values,ke_sun,c='y')
         axs[2].set_xlabel('Time (days)')
         axs[2].set_ylabel('Kinetic Energy (J)')
-        axs[3].plot(x_values,sun_potentials)
+        axs[3].plot(x_values,sun_potentials,c='y')
         axs[3].set_xlabel('Time (days)')
         axs[3].set_ylabel('Potential Energy (J)')
 
-        axs[4].plot(x_values,ke_jupiter)
+        axs[4].plot(x_values,ke_jupiter,c='orange')
         axs[4].set_xlabel('Time (days)')
         axs[4].set_ylabel('Kinetic Energy (J)')
-        axs[5].plot(x_values,jupiter_potentials)
+        axs[5].plot(x_values,jupiter_potentials,c='orange')
         axs[5].set_xlabel('Time (days)')
         axs[5].set_ylabel('Potential Energy (J)')
 
-        axs[6].plot(x_values,total_energy)
+        axs[6].plot(x_values,total_energy,c='r')
 
         fig,axs=plt.subplots(3)
         axs[0].plot(x_values,ke)
@@ -451,7 +458,7 @@ def milestone(display_vals, plot_orbits, show_animation, earth_sun_separation, j
         plt.show()
         
 
-milestone(False,True,False,False,False,False,False,False) 
+milestone(False,True,False,False,False,True,True,False) 
 
 '''
 
